@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Comportement Élèves</title>
+    <style>
+        :root {
+            --primary: #4e73df;
+            --success: #1cc88a;
+            --danger: #e74a3b;
+            --warning: #f6c23e;
+            --light: #f8f9fc;
+            --dark: #5a5c69;
+            --selected: #e8f4ff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fb;
+            color: var(--dark);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        /* Navigation par onglets */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab {
+            padding: 15px 20px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Contrôles */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .global-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .select-all-btn {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .deselect-all-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .add-points-btn {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .remove-points-btn {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .reset-btn {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .change-avatar-btn {
+            background-color: #6f42c1;
+            color: white;
+        }
+        
+        .save-btn {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        /* Grille d'élèves */
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+        }
+        
+        .student-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .student-card.selected {
+            background-color: var(--selected);
+            border: 2px solid var(--primary);
+        }
+        
+        .student-checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            z-index: 2;
+        }
+        
+        .student-avatar {
+            margin: 5px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 70px;
+        }
+        
+        .avatar-img {
+            font-size: 4rem;
+            line-height: 1;
+        }
+        
+        .student-name {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .student-id {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        
+        .points {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .positive {
+            color: var(--success);
+        }
+        
+        .negative {
+            color: var(--danger);
+        }
+        
+        .summary {
+            margin-top: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        /* Formulaire de gestion des élèves */
+        .student-form {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .student-list {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .student-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal h2 {
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+        
+        .modal p {
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .confirm-btn {
+            background-color: var(--danger);
+            color: white;
+            padding: 10px 20px;
+        }
+        
+        .cancel-btn {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+        }
+        
+        /* Popup de points */
+        .points-popup {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .points-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .point-btn {
+            padding: 10px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .positive-btn {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .negative-btn {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        /* Grille d'avatars */
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .avatar-option {
+            width: 80px;
+            height: 80px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background-color: #f8f9fc;
+        }
+        
+        .avatar-option:hover {
+            transform: scale(1.1);
+            background-color: #e9ecef;
+        }
+        
+        .avatar-option.selected {
+            background-color: var(--selected);
+            transform: scale(1.1);
+            border: 2px solid var(--primary);
+        }
+        
+        .avatar-option-emoji {
+            font-size: 3.5rem;
+        }
+        
+        @media (max-width: 1200px) {
+            .student-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .avatar-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .student-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .avatar-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .global-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .avatar-option {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .avatar-option-emoji {
+                font-size: 3rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .student-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .avatar-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .student-card {
+                height: 190px;
+            }
+            
+            .avatar-img {
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gestion des Comportements - Classe de CM2</h1>
+            <p>Compilation des points verts et rouges pour vos élèves</p>
+        </header>
+        
+        <!-- Navigation par onglets -->
+        <div class="tabs">
+            <div class="tab active" data-tab="student-view">Vue Élèves</div>
+            <div class="tab" data-tab="teacher-view">Vue Enseignant</div>
+        </div>
+        
+        <!-- Vue Élèves -->
+        <div class="tab-content active" id="student-view">
+            <div class="controls">
+                <div class="selection-controls">
+                    <button class="select-all-btn" id="selectAllBtn">Sélectionner tous</button>
+                    <button class="deselect-all-btn" id="deselectAllBtn">Désélectionner tous</button>
+                </div>
+                <div class="global-actions">
+                    <button class="add-points-btn" id="addPointsBtn">Ajouter points</button>
+                    <button class="remove-points-btn" id="removePointsBtn">Retirer points</button>
+                    <button class="reset-btn" id="resetBtn">Réinitialiser points</button>
+                    <button class="change-avatar-btn" id="changeAvatarBtn">Changer avatar</button>
+                </div>
+            </div>
+            
+            <div class="student-grid" id="studentGrid">
+                <!-- Les cartes des élèves seront générées ici -->
+            </div>
+            
+            <div class="summary">
+                <h3>Résumé de la classe</h3>
+                <p>Total des points verts: <span id="totalGreen">0</span> | Total des points rouges: <span id="totalRed">0</span></p>
+            </div>
+        </div>
+        
+        <!-- Vue Enseignant -->
+        <div class="tab-content" id="teacher-view">
+            <div class="student-form">
+                <h2>Gérer les élèves</h2>
+                <div class="form-group">
+                    <label for="studentId">Numéro de classe</label>
+                    <input type="number" id="studentId" min="1" max="99" placeholder="Numéro">
+                </div>
+                <div class="form-group">
+                    <label for="studentName">Prénom de l'élève</label>
+                    <input type="text" id="studentName" placeholder="Prénom">
+                </div>
+                <button class="save-btn" id="addStudentBtn">Ajouter l'élève</button>
+            </div>
+            
+            <div class="student-list" id="studentList">
+                <h2>Liste des élèves</h2>
+                <!-- La liste des élèves sera générée ici -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmation pour la réinitialisation -->
+    <div class="modal" id="resetModal">
+        <div class="modal-content">
+            <h2>Confirmation de réinitialisation</h2>
+            <p>Êtes-vous sûr de vouloir réinitialiser tous les points à zéro ?</p>
+            <p>Cette action est irréversible.</p>
+            <div class="modal-actions">
+                <button class="cancel-btn" id="cancelReset">Annuler</button>
+                <button class="confirm-btn" id="confirmReset">Tout réinitialiser</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de sélection d'avatar -->
+    <div class="modal" id="avatarModal">
+        <div class="modal-content">
+            <h2>Choisir un avatar</h2>
+            <p>Sélectionnez un élève puis choisissez un avatar parmi les options ci-dessous</p>
+            
+            <div class="avatar-grid" id="avatarGrid">
+                <!-- Les options d'avatar seront générées ici -->
+            </div>
+            
+            <div class="modal-actions">
+                <button class="cancel-btn" id="cancelAvatar">Annuler</button>
+                <button class="confirm-btn" id="confirmAvatar">Appliquer l'avatar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup pour AJOUTER des points -->
+    <div class="modal" id="addPointsModal">
+        <div class="modal-content">
+            <h2>Ajouter des points</h2>
+            <p id="addPointsModalText">Sélectionnez le nombre de points à ajouter</p>
+            
+            <div class="points-popup">
+                <div class="points-buttons">
+                    <button class="point-btn positive-btn" data-points="1">+1</button>
+                    <button class="point-btn positive-btn" data-points="2">+2</button>
+                    <button class="point-btn positive-btn" data-points="3">+3</button>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="cancel-btn" id="cancelAddPoints">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup pour RETIRER des points -->
+    <div class="modal" id="removePointsModal">
+        <div class="modal-content">
+            <h2>Retirer des points</h2>
+            <p id="removePointsModalText">Sélectionnez le nombre de points à retirer</p>
+            
+            <div class="points-popup">
+                <div class="points-buttons">
+                    <button class="point-btn negative-btn" data-points="-1">-1</button>
+                    <button class="point-btn negative-btn" data-points="-2">-2</button>
+                    <button class="point-btn negative-btn" data-points="-3">-3</button>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="cancel-btn" id="cancelRemovePoints">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Liste de 50 avatars pour enfants de 10 ans
+        const avatars = [
+            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯",
+            "🦁", "🐮", "🐷", "🐸", "🐙", "🐵", "🦄", "🐢", "🐬", "🐳",
+            "🦖", "🐠", "🐌", "🦉", "🐧", "🦜", "🐘", "🦒", "🦏", "🐪",
+            "🦩", "🦘", "🐿️", "🦔", "🦇", "🦥", "🦦", "🦨", "🦚", "🦃",
+            "🐲", "🌞", "⭐", "🌈", "🌺", "🍕", "🍦", "🚀", "🎮", "🎸"
+        ];
+
+        // Données des élèves (24 élèves comme demandé)
+        let students = [
+            { id: 1, name: "Léa", points: 12, avatar: "🐶" },
+            { id: 2, name: "Hugo", points: 8, avatar: "🐱" },
+            { id: 3, name: "Emma", points: 15, avatar: "🐭" },
+            { id: 4, name: "Lucas", points: 5, avatar: "🐹" },
+            { id: 5, name: "Chloé", points: 10, avatar: "🐰" },
+            { id: 6, name: "Thomas", points: 7, avatar: "🦊" },
+            { id: 7, name: "Zoé", points: 9, avatar: "🐻" },
+            { id: 8, name: "Nathan", points: 11, avatar: "🐼" },
+            { id: 9, name: "Manon", points: 6, avatar: "🐨" },
+            { id: 10, name: "Mathieu", points: 14, avatar: "🐯" },
+            { id: 11, name: "Inès", points: 8, avatar: "🦁" },
+            { id: 12, name: "Louis", points: 13, avatar: "🐮" },
+            { id: 13, name: "Julie", points: 4, avatar: "🐷" },
+            { id: 14, name: "Enzo", points: 10, avatar: "🐸" },
+            { id: 15, name: "Léa P.", points: 7, avatar: "🐙" },
+            { id: 16, name: "Raphaël", points: 9, avatar: "🐵" },
+            { id: 17, name: "Sarah", points: 11, avatar: "🦄" },
+            { id: 18, name: "Maxime", points: 6, avatar: "🐢" },
+            { id: 19, name: "Clara", points: 12, avatar: "🐬" },
+            { id: 20, name: "Alexandre", points: 8, avatar: "🐳" },
+            { id: 21, name: "Camille", points: 10, avatar: "🦖" },
+            { id: 22, name: "Quentin", points: 5, avatar: "🐠" },
+            { id: 23, name: "Lilou", points: 9, avatar: "🐌" },
+            { id: 24, name: "Noé", points: 13, avatar: "🦉" }
+        ];
+
+        // Éléments DOM
+        const studentGrid = document.getElementById('studentGrid');
+        const studentList = document.getElementById('studentList');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const deselectAllBtn = document.getElementById('deselectAllBtn');
+        const addPointsBtn = document.getElementById('addPointsBtn');
+        const removePointsBtn = document.getElementById('removePointsBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+        const totalGreenSpan = document.getElementById('totalGreen');
+        const totalRedSpan = document.getElementById('totalRed');
+        const resetModal = document.getElementById('resetModal');
+        const cancelReset = document.getElementById('cancelReset');
+        const confirmReset = document.getElementById('confirmReset');
+        const avatarModal = document.getElementById('avatarModal');
+        const avatarGrid = document.getElementById('avatarGrid');
+        const cancelAvatar = document.getElementById('cancelAvatar');
+        const confirmAvatar = document.getElementById('confirmAvatar');
+        const addPointsModal = document.getElementById('addPointsModal');
+        const cancelAddPoints = document.getElementById('cancelAddPoints');
+        const addPointsModalText = document.getElementById('addPointsModalText');
+        const removePointsModal = document.getElementById('removePointsModal');
+        const cancelRemovePoints = document.getElementById('cancelRemovePoints');
+        const removePointsModalText = document.getElementById('removePointsModalText');
+        const studentIdInput = document.getElementById('studentId');
+        const studentNameInput = document.getElementById('studentName');
+        const addStudentBtn = document.getElementById('addStudentBtn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Variables pour la gestion des avatars et points
+        let selectedAvatar = null;
+        let selectedStudentId = null;
+        let pointsTargetStudents = [];
+
+        // Afficher les élèves dans la grille
+        function displayStudents() {
+            studentGrid.innerHTML = '';
+            
+            students.forEach(student => {
+                const studentCard = document.createElement('div');
+                studentCard.className = 'student-card';
+                studentCard.dataset.id = student.id;
+                
+                studentCard.innerHTML = `
+                    <input type="checkbox" class="student-checkbox" id="student-${student.id}">
+                    <div class="student-avatar">
+                        <div class="avatar-img">${student.avatar}</div>
+                    </div>
+                    <div class="student-id">#${student.id}</div>
+                    <div class="student-name">${student.name}</div>
+                    <div class="points ${student.points >= 0 ? 'positive' : 'negative'}">${student.points}</div>
+                `;
+                
+                studentGrid.appendChild(studentCard);
+                
+                // Ajouter l'écouteur d'événement pour la sélection
+                const checkbox = studentCard.querySelector('.student-checkbox');
+                checkbox.addEventListener('change', function() {
+                    studentCard.classList.toggle('selected', this.checked);
+                });
+                
+                // Ajouter l'écouteur pour la sélection (uniquement sur la carte, pas la checkbox)
+                studentCard.addEventListener('click', function(e) {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        studentCard.classList.toggle('selected', checkbox.checked);
+                    }
+                });
+            });
+            
+            updateSummary();
+        }
+
+        // Afficher la liste des élèves pour l'enseignant
+        function displayStudentList() {
+            studentList.innerHTML = '<h2>Liste des élèves</h2>';
+            
+            if (students.length === 0) {
+                studentList.innerHTML += '<p>Aucun élève enregistré.</p>';
+                return;
+            }
+            
+            students.forEach(student => {
+                const studentItem = document.createElement('div');
+                studentItem.className = 'student-item';
+                studentItem.innerHTML = `
+                    <div>#${student.id} - ${student.name}</div>
+                    <button class="remove-btn" data-id="${student.id}">Supprimer</button>
+                `;
+                
+                studentList.appendChild(studentItem);
+            });
+            
+            // Ajouter les écouteurs pour les boutons de suppression
+            document.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.dataset.id);
+                    deleteStudent(id);
+                });
+            });
+        }
+
+        // Supprimer un élève
+        function deleteStudent(id) {
+            if (confirm(`Êtes-vous sûr de vouloir supprimer l'élève #${id} ?`)) {
+                students = students.filter(student => student.id !== id);
+                displayStudents();
+                displayStudentList();
+            }
+        }
+
+        // Ajouter un nouvel élève
+        function addStudent() {
+            const id = parseInt(studentIdInput.value);
+            const name = studentNameInput.value.trim();
+            
+            if (!id || id < 1) {
+                alert("Veuillez entrer un numéro de classe valide.");
+                return;
+            }
+            
+            if (!name) {
+                alert("Veuillez entrer un prénom.");
+                return;
+            }
+            
+            // Vérifier si le numéro est déjà utilisé
+            if (students.some(student => student.id === id)) {
+                alert(`Le numéro #${id} est déjà utilisé.`);
+                return;
+            }
+            
+            // Choisir un avatar aléatoire
+            const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+            
+            // Ajouter le nouvel élève
+            students.push({
+                id: id,
+                name: name,
+                points: 0,
+                avatar: randomAvatar
+            });
+            
+            // Trier les élèves par numéro
+            students.sort((a, b) => a.id - b.id);
+            
+            // Mettre à jour l'affichage
+            displayStudents();
+            displayStudentList();
+            
+            // Réinitialiser le formulaire
+            studentIdInput.value = '';
+            studentNameInput.value = '';
+            
+            alert(`Élève ${name} (#${id}) ajouté avec succès !`);
+        }
+
+        // Afficher les options d'avatar
+        function displayAvatarOptions() {
+            avatarGrid.innerHTML = '';
+            
+            avatars.forEach((avatar, index) => {
+                const avatarOption = document.createElement('div');
+                avatarOption.className = 'avatar-option';
+                avatarOption.innerHTML = `<div class="avatar-option-emoji">${avatar}</div>`;
+                avatarOption.dataset.avatar = avatar;
+                
+                avatarOption.addEventListener('click', function() {
+                    // Désélectionner tous les avatars
+                    document.querySelectorAll('.avatar-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    
+                    // Sélectionner cet avatar
+                    this.classList.add('selected');
+                    selectedAvatar = avatar;
+                });
+                
+                avatarGrid.appendChild(avatarOption);
+            });
+        }
+
+        // Mettre à jour le résumé des points
+        function updateSummary() {
+            let totalGreen = 0;
+            let totalRed = 0;
+            
+            students.forEach(student => {
+                if (student.points >= 0) {
+                    totalGreen += student.points;
+                } else {
+                    totalRed += Math.abs(student.points);
+                }
+            });
+            
+            totalGreenSpan.textContent = totalGreen;
+            totalRedSpan.textContent = totalRed;
+        }
+
+        // Ouvrir le popup pour AJOUTER des points
+        function openAddPointsModal(studentIds) {
+            pointsTargetStudents = studentIds;
+            
+            if (studentIds.length === 1) {
+                const student = students.find(s => s.id === studentIds[0]);
+                addPointsModalText.textContent = `Ajouter des points à ${student.name} (#${student.id})`;
+            } else {
+                addPointsModalText.textContent = `Ajouter des points à ${studentIds.length} élèves sélectionnés`;
+            }
+            
+            addPointsModal.style.display = 'flex';
+        }
+
+        // Ouvrir le popup pour RETIRER des points
+        function openRemovePointsModal(studentIds) {
+            pointsTargetStudents = studentIds;
+            
+            if (studentIds.length === 1) {
+                const student = students.find(s => s.id === studentIds[0]);
+                removePointsModalText.textContent = `Retirer des points à ${student.name} (#${student.id})`;
+            } else {
+                removePointsModalText.textContent = `Retirer des points à ${studentIds.length} élèves sélectionnés`;
+            }
+            
+            removePointsModal.style.display = 'flex';
+        }
+
+        // Appliquer des points aux élèves
+        function applyPoints(points) {
+            pointsTargetStudents.forEach(studentId => {
+                const student = students.find(s => s.id === studentId);
+                if (student) {
+                    student.points += points;
+                }
+            });
+            
+            displayStudents();
+            addPointsModal.style.display = 'none';
+            removePointsModal.style.display = 'none';
+        }
+
+        // Réinitialiser tous les points à zéro
+        function resetAllPoints() {
+            students.forEach(student => {
+                student.points = 0;
+            });
+            
+            displayStudents();
+            resetModal.style.display = 'none';
+            alert("Tous les points ont été réinitialisés avec succès !");
+        }
+
+        // Obtenir les IDs des élèves sélectionnés
+        function getSelectedStudentIds() {
+            return Array.from(document.querySelectorAll('.student-checkbox:checked'))
+                .map(checkbox => parseInt(checkbox.id.split('-')[1]));
+        }
+
+        // Gestion des onglets
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabId = this.dataset.tab;
+                
+                // Désactiver tous les onglets
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                
+                // Activate the clicked tab
+                this.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Événements
+        selectAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                checkbox.checked = true;
+                checkbox.closest('.student-card').classList.add('selected');
+            });
+        });
+
+        deselectAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.closest('.student-card').classList.remove('selected');
+            });
+        });
+
+        resetBtn.addEventListener('click', function() {
+            resetModal.style.display = 'flex';
+        });
+
+        cancelReset.addEventListener('click', function() {
+            resetModal.style.display = 'none';
+        });
+
+        confirmReset.addEventListener('click', resetAllPoints);
+
+        changeAvatarBtn.addEventListener('click', function() {
+            const selectedStudents = getSelectedStudentIds();
+            
+            if (selectedStudents.length !== 1) {
+                alert("Veuillez sélectionner un seul élève pour changer son avatar.");
+                return;
+            }
+            
+            selectedStudentId = selectedStudents[0];
+            displayAvatarOptions();
+            selectedAvatar = null;
+            document.querySelectorAll('.avatar-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            avatarModal.style.display = 'flex';
+        });
+
+        cancelAvatar.addEventListener('click', function() {
+            avatarModal.style.display = 'none';
+            selectedStudentId = null;
+            selectedAvatar = null;
+        });
+
+        confirmAvatar.addEventListener('click', function() {
+            if (!selectedAvatar) {
+                alert("Veuillez sélectionner un avatar.");
+                return;
+            }
+            
+            const student = students.find(s => s.id === selectedStudentId);
+            if (student) {
+                student.avatar = selectedAvatar;
+                displayStudents();
+                avatarModal.style.display = 'none';
+                alert(`Avatar de ${student.name} modifié avec succès !`);
+            }
+        });
+
+        cancelAddPoints.addEventListener('click', function() {
+            addPointsModal.style.display = 'none';
+        });
+
+        cancelRemovePoints.addEventListener('click', function() {
+            removePointsModal.style.display = 'none';
+        });
+
+        // Événements pour les boutons de points (AJOUTER)
+        document.querySelectorAll('#addPointsModal .point-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const points = parseInt(this.dataset.points);
+                applyPoints(points);
+            });
+        });
+
+        // Événements pour les boutons de points (RETIRER)
+        document.querySelectorAll('#removePointsModal .point-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const points = parseInt(this.dataset.points);
+                applyPoints(points);
+            });
+        });
+
+        // Événement pour le bouton d'ajout d'élève
+        addStudentBtn.addEventListener('click', addStudent);
+
+        // Événement pour ajouter un élève avec la touche Entrée
+        studentNameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addStudent();
+            }
+        });
+
+        // Événements pour les boutons d'actions groupées
+        addPointsBtn.addEventListener('click', function() {
+            const selectedStudents = getSelectedStudentIds();
+            
+            if (selectedStudents.length === 0) {
+                alert("Veuillez sélectionner au moins un élève.");
+                return;
+            }
+            
+            openAddPointsModal(selectedStudents);
+        });
+
+        removePointsBtn.addEventListener('click', function() {
+            const selectedStudents = getSelectedStudentIds();
+            
+            if (selectedStudents.length === 0) {
+                alert("Veuillez sélectionner au moins un élève.");
+                return;
+            }
+            
+            openRemovePointsModal(selectedStudents);
+        });
+
+        // Initialiser l'affichage
+        displayStudents();
+        displayStudentList();
+    </script>
+</body>
+</html>
