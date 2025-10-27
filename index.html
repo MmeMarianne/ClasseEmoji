@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClasseEmojis</title>
+    <title>ClasseEmoji - Groupe 401</title>
+    
+    <!-- Intégration de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
     <style>
         :root {
             --primary: #4e73df;
@@ -13,6 +18,7 @@
             --light: #f8f9fc;
             --dark: #5a5c69;
             --selected: #e8f4ff;
+            --absent: #f8d7da;
         }
         
         * {
@@ -25,7 +31,7 @@
         body {
             background-color: #f5f7fb;
             color: var(--dark);
-            padding: 20px;
+            padding: 10px;
         }
         
         .container {
@@ -35,35 +41,62 @@
         
         header {
             background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
             text-align: center;
+            position: relative;
+        }
+        
+        .connection-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-connected {
+            background-color: var(--success);
+        }
+        
+        .status-disconnected {
+            background-color: var(--danger);
         }
         
         h1 {
             color: var(--primary);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-size: 1.4rem;
         }
         
         /* Navigation par onglets */
         .tabs {
             display: flex;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             background: white;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .tab {
-            padding: 15px 20px;
+            padding: 12px 15px;
             cursor: pointer;
             flex: 1;
             text-align: center;
             font-weight: bold;
             transition: all 0.3s;
+            font-size: 0.9rem;
         }
         
         .tab.active {
@@ -82,28 +115,30 @@
         /* Contrôles */
         .controls {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
             background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
-        .global-actions {
+        .selection-controls, .global-actions {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
+            justify-content: center;
         }
         
         button {
-            padding: 10px 15px;
+            padding: 8px 12px;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s;
+            font-size: 0.85rem;
         }
         
         .select-all-btn {
@@ -136,6 +171,16 @@
             color: white;
         }
         
+        .mark-absent-btn {
+            background-color: #fd7e14;
+            color: white;
+        }
+        
+        .mark-present-btn {
+            background-color: #20c997;
+            color: white;
+        }
+        
         .save-btn {
             background-color: var(--success);
             color: white;
@@ -144,22 +189,28 @@
         /* Grille d'élèves */
         .student-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
         }
         
         .student-card {
             background-color: white;
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 10px 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             text-align: center;
             transition: all 0.3s;
             position: relative;
-            height: 200px;
+            height: 160px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            cursor: pointer;
+        }
+        
+        .student-card.absent {
+            background-color: var(--absent);
+            opacity: 0.8;
         }
         
         .student-card.selected {
@@ -169,43 +220,47 @@
         
         .student-checkbox {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 20px;
-            height: 20px;
+            top: 6px;
+            left: 6px;
+            width: 18px;
+            height: 18px;
             cursor: pointer;
             z-index: 2;
         }
         
         .student-avatar {
-            margin: 5px auto;
+            margin: 2px auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 70px;
+            height: 60px;
         }
         
         .avatar-img {
-            font-size: 4rem;
+            font-size: 3.5rem;
             line-height: 1;
         }
         
         .student-name {
-            font-size: 0.9rem;
-            margin-bottom: 5px;
+            font-size: 0.85rem;
+            margin-bottom: 3px;
             font-weight: 500;
+            line-height: 1.2;
+            max-height: 2.4em;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .student-id {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #6c757d;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
         
         .points {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: bold;
-            margin: 5px 0;
+            margin: 3px 0;
         }
         
         .positive {
@@ -216,54 +271,78 @@
             color: var(--danger);
         }
         
+        .absent-badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background-color: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        
         .summary {
-            margin-top: 20px;
+            margin-top: 15px;
             background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             text-align: center;
+        }
+        
+        .summary h3 {
+            font-size: 1rem;
+            margin-bottom: 8px;
         }
         
         /* Formulaire de gestion des élèves */
         .student-form {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
         }
         
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             font-weight: bold;
+            font-size: 0.9rem;
         }
         
         .form-group input {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 4px;
+            font-size: 0.9rem;
         }
         
         .student-list {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .student-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
+            padding: 8px;
             border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
         }
         
         .student-item:last-child {
@@ -282,67 +361,71 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            padding: 10px;
         }
         
         .modal-content {
             background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
+            padding: 20px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             max-height: 90vh;
             overflow-y: auto;
         }
         
         .modal h2 {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             color: var(--primary);
+            font-size: 1.3rem;
         }
         
         .modal p {
-            margin-bottom: 25px;
-            font-size: 1.1rem;
+            margin-bottom: 20px;
+            font-size: 1rem;
         }
         
         .modal-actions {
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 15px;
         }
         
         .confirm-btn {
             background-color: var(--danger);
             color: white;
-            padding: 10px 20px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
         }
         
         .cancel-btn {
             background-color: #6c757d;
             color: white;
-            padding: 10px 20px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
         }
         
         /* Popup de points */
         .points-popup {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
         
         .points-buttons {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
         }
         
         .point-btn {
-            padding: 10px;
-            font-size: 1.2rem;
+            padding: 12px;
+            font-size: 1.1rem;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
         }
         
@@ -359,20 +442,20 @@
         /* Grille d'avatars */
         .avatar-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            margin: 20px 0;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 15px 0;
         }
         
         .avatar-option {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 6px;
             background-color: #f8f9fc;
         }
         
@@ -388,63 +471,68 @@
         }
         
         .avatar-option-emoji {
-            font-size: 3.5rem;
+            font-size: 2.8rem;
         }
         
-        @media (max-width: 1200px) {
-            .student-grid {
-                grid-template-columns: repeat(4, 1fr);
+        @media (min-width: 768px) {
+            body {
+                padding: 15px;
             }
             
-            .avatar-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .student-grid {
-                grid-template-columns: repeat(3, 1fr);
+            header {
+                padding: 20px;
+                margin-bottom: 20px;
             }
             
-            .avatar-grid {
-                grid-template-columns: repeat(3, 1fr);
+            h1 {
+                font-size: 1.6rem;
+                margin-bottom: 10px;
+            }
+            
+            .tabs {
+                margin-bottom: 20px;
+            }
+            
+            .tab {
+                padding: 15px 20px;
+                font-size: 1rem;
             }
             
             .controls {
-                flex-direction: column;
-                gap: 10px;
+                flex-direction: row;
+                justify-content: space-between;
+                padding: 15px;
+                margin-bottom: 20px;
             }
             
-            .global-actions {
-                flex-wrap: wrap;
-                justify-content: center;
+            button {
+                padding: 10px 15px;
+                font-size: 0.9rem;
             }
             
-            .avatar-option {
-                width: 70px;
-                height: 70px;
-            }
-            
-            .avatar-option-emoji {
-                font-size: 3rem;
-            }
-        }
-        
-        @media (max-width: 480px) {
             .student-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .avatar-grid {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                gap: 15px;
             }
             
             .student-card {
-                height: 190px;
+                padding: 12px 10px;
+                height: 170px;
             }
             
-            .avatar-img {
-                font-size: 3.5rem;
+            .avatar-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 12px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .student-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+            
+            .avatar-grid {
+                grid-template-columns: repeat(6, 1fr);
             }
         }
     </style>
@@ -452,8 +540,13 @@
 <body>
     <div class="container">
         <header>
-            <h1>ClasseEmojis - Groupe 401</h1>
-    </header>
+            <div class="connection-status" id="connectionStatus">
+                <div class="status-dot status-disconnected"></div>
+                <span>Déconnecté</span>
+            </div>
+            <h1>ClasseEmoji - Groupe 401</h1>
+            <p>Compilation des points verts et rouges pour vos élèves</p>
+        </header>
         
         <!-- Navigation par onglets -->
         <div class="tabs">
@@ -469,10 +562,12 @@
                     <button class="deselect-all-btn" id="deselectAllBtn">Désélectionner tous</button>
                 </div>
                 <div class="global-actions">
-                    <button class="add-points-btn" id="addPointsBtn">Ajouter points</button>
-                    <button class="remove-points-btn" id="removePointsBtn">Retirer points</button>
-                    <button class="reset-btn" id="resetBtn">Réinitialiser points</button>
-                    <button class="change-avatar-btn" id="changeAvatarBtn">Changer avatar</button>
+                    <button class="add-points-btn" id="addPointsBtn">+ Points</button>
+                    <button class="remove-points-btn" id="removePointsBtn">- Points</button>
+                    <button class="mark-absent-btn" id="markAbsentBtn">Marquer absent</button>
+                    <button class="mark-present-btn" id="markPresentBtn">Marquer présent</button>
+                    <button class="reset-btn" id="resetBtn">Reset points</button>
+                    <button class="change-avatar-btn" id="changeAvatarBtn">Avatar</button>
                 </div>
             </div>
             
@@ -482,7 +577,7 @@
             
             <div class="summary">
                 <h3>Résumé de la classe</h3>
-                <p>Total des points verts: <span id="totalGreen">0</span> | Total des points rouges: <span id="totalRed">0</span></p>
+                <p>Total des points verts: <span id="totalGreen">0</span> | Total des points rouges: <span id="totalRed">0</span> | Élèves absents: <span id="totalAbsent">0</span></p>
             </div>
         </div>
         
@@ -548,7 +643,6 @@
                 <div class="points-buttons">
                     <button class="point-btn positive-btn" data-points="1">+1</button>
                     <button class="point-btn positive-btn" data-points="2">+2</button>
-                    <button class="point-btn positive-btn" data-points="3">+3</button>
                 </div>
             </div>
             
@@ -568,7 +662,6 @@
                 <div class="points-buttons">
                     <button class="point-btn negative-btn" data-points="-1">-1</button>
                     <button class="point-btn negative-btn" data-points="-2">-2</button>
-                    <button class="point-btn negative-btn" data-points="-3">-3</button>
                 </div>
             </div>
             
@@ -579,54 +672,137 @@
     </div>
 
     <script>
-        // Liste de 50 avatars pour enfants de 10 ans
+        // ==================== CONFIGURATION FIREBASE ====================
+        // Configuration Firebase pour le projet ClasseEmoji
+        const firebaseConfig = {
+            apiKey: "AIzaSyBBCRNQAlf3rJBtXufQOhUk-ErLoPx4mcA",
+            authDomain: "classeemoji-520a1.firebaseapp.com",
+            databaseURL: "https://classeemoji-520a1-default-rtdb.firebaseio.com",
+            projectId: "classeemoji-520a1",
+            storageBucket: "classeemoji-520a1.firebasestorage.app",
+            messagingSenderId: "258178839258",
+            appId: "1:258178839258:web:a8007058aafbe2462babe3"
+        };
+        
+        // Initialiser Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Référence à la collection des élèves
+        const studentsRef = db.collection("students");
+        
+        // ==================== SYSTÈME DE SONS ====================
+        
+        // Créer l'audio context pour générer les sons
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Fonction pour jouer un son positif (point vert)
+        function playPositiveSound() {
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // Do (C5)
+                oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // Mi (E5)
+                oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // Sol (G5)
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (error) {
+                console.log("Son positif non disponible");
+            }
+        }
+        
+        // Fonction pour jouer un son négatif (point rouge)
+        function playNegativeSound() {
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(220, audioContext.currentTime); // La (A3)
+                oscillator.frequency.setValueAtTime(196, audioContext.currentTime + 0.2); // Sol (G3)
+                oscillator.frequency.setValueAtTime(174.61, audioContext.currentTime + 0.4); // Fa (F3)
+                
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.6);
+            } catch (error) {
+                console.log("Son négatif non disponible");
+            }
+        }
+        
+        // ==================== GESTION DE LA CONNEXION ====================
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusDot = connectionStatus.querySelector('.status-dot');
+        const statusText = connectionStatus.querySelector('span');
+        
+        // Surveiller l'état de connexion
+        firebase.firestore().enableNetwork()
+            .then(() => {
+                statusDot.classList.remove('status-disconnected');
+                statusDot.classList.add('status-connected');
+                statusText.textContent = 'Connecté';
+            })
+            .catch((error) => {
+                console.error("Erreur de connexion: ", error);
+                statusDot.classList.remove('status-connected');
+                statusDot.classList.add('status-disconnected');
+                statusText.textContent = 'Déconnecté';
+            });
+        
+        // Écouter les changements de connexion
+        firebase.firestore().onSnapshotsInSync(() => {
+            statusDot.classList.remove('status-disconnected');
+            statusDot.classList.add('status-connected');
+            statusText.textContent = 'Connecté';
+        });
+        
+        // ==================== DONNÉES PAR DÉFAUT ====================
+        // Liste de 100 avatars pour enfants de 10 ans
         const avatars = [
             "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯",
             "🦁", "🐮", "🐷", "🐸", "🐙", "🐵", "🦄", "🐢", "🐬", "🐳",
             "🦖", "🐠", "🐌", "🦉", "🐧", "🦜", "🐘", "🦒", "🦏", "🐪",
             "🦩", "🦘", "🐿️", "🦔", "🦇", "🦥", "🦦", "🦨", "🦚", "🦃",
-            "🐲", "🌞", "⭐", "🌈", "🌺", "🍕", "🍦", "🚀", "🎮", "🎸"
+            "🐲", "🌞", "⭐", "🌈", "🌺", "🍕", "🍦", "🚀", "🎮", "🎸",
+            // Nouveaux avatars
+            "🤖", "👾", "🦕", "🦴", "🐾", "🌻", "🍄", "🌍", "🌕", "🪐",
+            "🔥", "💧", "🌪️", "❄️", "⚡", "💫", "🧩", "🎯", "🎨", "🎪",
+            "🎭", "🛸", "🧸", "🎁", "🎊", "🎉", "🪁", "🧭", "🔭", "💎",
+            "🧠", "👁️", "👅", "👂", "👃", "👣", "👄", "🦷", "🦴", "💪",
+            "🧚", "🧜", "🧞", "🧝", "🦸", "🦹", "🧙", "🧛", "🧟", "🎅"
         ];
-
-        // Données des élèves (24 élèves comme demandé)
-        let students = [
-            { id: 1, name: "Léa", points: 12, avatar: "🐶" },
-            { id: 2, name: "Hugo", points: 8, avatar: "🐱" },
-            { id: 3, name: "Emma", points: 15, avatar: "🐭" },
-            { id: 4, name: "Lucas", points: 5, avatar: "🐹" },
-            { id: 5, name: "Chloé", points: 10, avatar: "🐰" },
-            { id: 6, name: "Thomas", points: 7, avatar: "🦊" },
-            { id: 7, name: "Zoé", points: 9, avatar: "🐻" },
-            { id: 8, name: "Nathan", points: 11, avatar: "🐼" },
-            { id: 9, name: "Manon", points: 6, avatar: "🐨" },
-            { id: 10, name: "Mathieu", points: 14, avatar: "🐯" },
-            { id: 11, name: "Inès", points: 8, avatar: "🦁" },
-            { id: 12, name: "Louis", points: 13, avatar: "🐮" },
-            { id: 13, name: "Julie", points: 4, avatar: "🐷" },
-            { id: 14, name: "Enzo", points: 10, avatar: "🐸" },
-            { id: 15, name: "Léa P.", points: 7, avatar: "🐙" },
-            { id: 16, name: "Raphaël", points: 9, avatar: "🐵" },
-            { id: 17, name: "Sarah", points: 11, avatar: "🦄" },
-            { id: 18, name: "Maxime", points: 6, avatar: "🐢" },
-            { id: 19, name: "Clara", points: 12, avatar: "🐬" },
-            { id: 20, name: "Alexandre", points: 8, avatar: "🐳" },
-            { id: 21, name: "Camille", points: 10, avatar: "🦖" },
-            { id: 22, name: "Quentin", points: 5, avatar: "🐠" },
-            { id: 23, name: "Lilou", points: 9, avatar: "🐌" },
-            { id: 24, name: "Noé", points: 13, avatar: "🦉" }
-        ];
-
-        // Éléments DOM
+        
+        // Données des élèves (vide au début, sera chargé depuis Firebase)
+        let students = [];
+        
+        // ==================== ÉLÉMENTS DOM ====================
         const studentGrid = document.getElementById('studentGrid');
         const studentList = document.getElementById('studentList');
         const selectAllBtn = document.getElementById('selectAllBtn');
         const deselectAllBtn = document.getElementById('deselectAllBtn');
         const addPointsBtn = document.getElementById('addPointsBtn');
         const removePointsBtn = document.getElementById('removePointsBtn');
+        const markAbsentBtn = document.getElementById('markAbsentBtn');
+        const markPresentBtn = document.getElementById('markPresentBtn');
         const resetBtn = document.getElementById('resetBtn');
         const changeAvatarBtn = document.getElementById('changeAvatarBtn');
         const totalGreenSpan = document.getElementById('totalGreen');
         const totalRedSpan = document.getElementById('totalRed');
+        const totalAbsentSpan = document.getElementById('totalAbsent');
         const resetModal = document.getElementById('resetModal');
         const cancelReset = document.getElementById('cancelReset');
         const confirmReset = document.getElementById('confirmReset');
@@ -645,23 +821,121 @@
         const addStudentBtn = document.getElementById('addStudentBtn');
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
-
+        
         // Variables pour la gestion des avatars et points
         let selectedAvatar = null;
         let selectedStudentId = null;
         let pointsTargetStudents = [];
-
+        
+        // ==================== FONCTIONS FIREBASE ====================
+        
+        // Charger les élèves depuis Firebase
+        function loadStudentsFromFirebase() {
+            studentsRef.orderBy("id").onSnapshot((snapshot) => {
+                students = [];
+                snapshot.forEach((doc) => {
+                    students.push(doc.data());
+                });
+                displayStudents();
+                displayStudentList();
+                updateSummary();
+            }, (error) => {
+                console.error("Erreur lors du chargement des élèves: ", error);
+                alert("Erreur de connexion à la base de données. Les données affichées peuvent ne pas être à jour.");
+            });
+        }
+        
+        // Sauvegarder un élève dans Firebase
+        async function saveStudentToFirebase(student) {
+            try {
+                await studentsRef.doc(student.id.toString()).set(student);
+                console.log("Élève sauvegardé avec succès: ", student.id);
+            } catch (error) {
+                console.error("Erreur lors de la sauvegarde: ", error);
+                alert("Erreur lors de la sauvegarde. Veuillez réessayer.");
+            }
+        }
+        
+        // Mettre à jour un élève dans Firebase
+        async function updateStudentInFirebase(studentId, updates) {
+            try {
+                await studentsRef.doc(studentId.toString()).update(updates);
+                console.log("Élève mis à jour avec succès: ", studentId);
+            } catch (error) {
+                console.error("Erreur lors de la mise à jour: ", error);
+                alert("Erreur lors de la mise à jour. Veuillez réessayer.");
+            }
+        }
+        
+        // Supprimer un élève de Firebase
+        async function deleteStudentFromFirebase(studentId) {
+            try {
+                await studentsRef.doc(studentId.toString()).delete();
+                console.log("Élève supprimé avec succès: ", studentId);
+            } catch (error) {
+                console.error("Erreur lors de la suppression: ", error);
+                alert("Erreur lors de la suppression. Veuillez réessayer.");
+            }
+        }
+        
+        // Initialiser les données par défaut (à exécuter une seule fois)
+        async function initializeDefaultData() {
+            const snapshot = await studentsRef.get();
+            if (snapshot.empty) {
+                // Ajouter les élèves par défaut seulement si la collection est vide
+                const defaultStudents = [
+                    { id: 1, name: "Léa", points: 12, avatar: "🐶", absent: false },
+                    { id: 2, name: "Hugo", points: 8, avatar: "🐱", absent: false },
+                    { id: 3, name: "Emma", points: 15, avatar: "🐭", absent: false },
+                    { id: 4, name: "Lucas", points: 5, avatar: "🐹", absent: false },
+                    { id: 5, name: "Chloé", points: 10, avatar: "🐰", absent: false },
+                    { id: 6, name: "Thomas", points: 7, avatar: "🦊", absent: false },
+                    { id: 7, name: "Zoé", points: 9, avatar: "🐻", absent: false },
+                    { id: 8, name: "Nathan", points: 11, avatar: "🐼", absent: false },
+                    { id: 9, name: "Manon", points: 6, avatar: "🐨", absent: false },
+                    { id: 10, name: "Mathieu", points: 14, avatar: "🐯", absent: false },
+                    { id: 11, name: "Inès", points: 8, avatar: "🦁", absent: false },
+                    { id: 12, name: "Louis", points: 13, avatar: "🐮", absent: false },
+                    { id: 13, name: "Julie", points: 4, avatar: "🐷", absent: false },
+                    { id: 14, name: "Enzo", points: 10, avatar: "🐸", absent: false },
+                    { id: 15, name: "Léa P.", points: 7, avatar: "🐙", absent: false },
+                    { id: 16, name: "Raphaël", points: 9, avatar: "🐵", absent: false },
+                    { id: 17, name: "Sarah", points: 11, avatar: "🦄", absent: false },
+                    { id: 18, name: "Maxime", points: 6, avatar: "🐢", absent: false },
+                    { id: 19, name: "Clara", points: 12, avatar: "🐬", absent: false },
+                    { id: 20, name: "Alexandre", points: 8, avatar: "🐳", absent: false },
+                    { id: 21, name: "Camille", points: 10, avatar: "🦖", absent: false },
+                    { id: 22, name: "Quentin", points: 5, avatar: "🐠", absent: false },
+                    { id: 23, name: "Lilou", points: 9, avatar: "🐌", absent: false },
+                    { id: 24, name: "Noé", points: 13, avatar: "🦉", absent: false }
+                ];
+                
+                const batch = db.batch();
+                defaultStudents.forEach(student => {
+                    const studentRef = studentsRef.doc(student.id.toString());
+                    batch.set(studentRef, student);
+                });
+                
+                await batch.commit();
+                console.log("Données par défaut initialisées avec succès");
+            }
+        }
+        
+        // ==================== FONCTIONS DE L'APPLICATION ====================
+        
         // Afficher les élèves dans la grille
         function displayStudents() {
             studentGrid.innerHTML = '';
             
             students.forEach(student => {
                 const studentCard = document.createElement('div');
-                studentCard.className = 'student-card';
+                studentCard.className = `student-card ${student.absent ? 'absent' : ''}`;
                 studentCard.dataset.id = student.id;
+                studentCard.dataset.absent = student.absent;
                 
                 studentCard.innerHTML = `
                     <input type="checkbox" class="student-checkbox" id="student-${student.id}">
+                    ${student.absent ? '<div class="absent-badge">A</div>' : ''}
                     <div class="student-avatar">
                         <div class="avatar-img">${student.avatar}</div>
                     </div>
@@ -689,7 +963,7 @@
             
             updateSummary();
         }
-
+        
         // Afficher la liste des élèves pour l'enseignant
         function displayStudentList() {
             studentList.innerHTML = '<h2>Liste des élèves</h2>';
@@ -703,8 +977,10 @@
                 const studentItem = document.createElement('div');
                 studentItem.className = 'student-item';
                 studentItem.innerHTML = `
-                    <div>#${student.id} - ${student.name}</div>
-                    <button class="remove-btn" data-id="${student.id}">Supprimer</button>
+                    <div>#${student.id} - ${student.name} ${student.absent ? '<span style="color:red">(Absent)</span>' : ''}</div>
+                    <div>
+                        <button class="remove-btn" data-id="${student.id}">Supprimer</button>
+                    </div>
                 `;
                 
                 studentList.appendChild(studentItem);
@@ -718,18 +994,16 @@
                 });
             });
         }
-
+        
         // Supprimer un élève
-        function deleteStudent(id) {
+        async function deleteStudent(id) {
             if (confirm(`Êtes-vous sûr de vouloir supprimer l'élève #${id} ?`)) {
-                students = students.filter(student => student.id !== id);
-                displayStudents();
-                displayStudentList();
+                await deleteStudentFromFirebase(id);
             }
         }
-
+        
         // Ajouter un nouvel élève
-        function addStudent() {
+        async function addStudent() {
             const id = parseInt(studentIdInput.value);
             const name = studentNameInput.value.trim();
             
@@ -752,20 +1026,17 @@
             // Choisir un avatar aléatoire
             const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
             
-            // Ajouter le nouvel élève
-            students.push({
+            // Créer le nouvel élève
+            const newStudent = {
                 id: id,
                 name: name,
                 points: 0,
-                avatar: randomAvatar
-            });
+                avatar: randomAvatar,
+                absent: false
+            };
             
-            // Trier les élèves par numéro
-            students.sort((a, b) => a.id - b.id);
-            
-            // Mettre à jour l'affichage
-            displayStudents();
-            displayStudentList();
+            // Sauvegarder dans Firebase
+            await saveStudentToFirebase(newStudent);
             
             // Réinitialiser le formulaire
             studentIdInput.value = '';
@@ -773,7 +1044,7 @@
             
             alert(`Élève ${name} (#${id}) ajouté avec succès !`);
         }
-
+        
         // Afficher les options d'avatar
         function displayAvatarOptions() {
             avatarGrid.innerHTML = '';
@@ -798,11 +1069,12 @@
                 avatarGrid.appendChild(avatarOption);
             });
         }
-
+        
         // Mettre à jour le résumé des points
         function updateSummary() {
             let totalGreen = 0;
             let totalRed = 0;
+            let totalAbsent = 0;
             
             students.forEach(student => {
                 if (student.points >= 0) {
@@ -810,71 +1082,182 @@
                 } else {
                     totalRed += Math.abs(student.points);
                 }
+                
+                if (student.absent) {
+                    totalAbsent += 1;
+                }
             });
             
             totalGreenSpan.textContent = totalGreen;
             totalRedSpan.textContent = totalRed;
+            totalAbsentSpan.textContent = totalAbsent;
         }
-
+        
         // Ouvrir le popup pour AJOUTER des points
         function openAddPointsModal(studentIds) {
-            pointsTargetStudents = studentIds;
+            // Filtrer les élèves absents
+            const presentStudents = studentIds.filter(id => {
+                const student = students.find(s => s.id === id);
+                return student && !student.absent;
+            });
             
-            if (studentIds.length === 1) {
-                const student = students.find(s => s.id === studentIds[0]);
+            if (presentStudents.length === 0) {
+                alert("Veuillez sélectionner au moins un élève présent.");
+                return;
+            }
+            
+            pointsTargetStudents = presentStudents;
+            
+            if (presentStudents.length === 1) {
+                const student = students.find(s => s.id === presentStudents[0]);
                 addPointsModalText.textContent = `Ajouter des points à ${student.name} (#${student.id})`;
             } else {
-                addPointsModalText.textContent = `Ajouter des points à ${studentIds.length} élèves sélectionnés`;
+                addPointsModalText.textContent = `Ajouter des points à ${presentStudents.length} élèves sélectionnés`;
             }
             
             addPointsModal.style.display = 'flex';
         }
-
+        
         // Ouvrir le popup pour RETIRER des points
         function openRemovePointsModal(studentIds) {
-            pointsTargetStudents = studentIds;
+            // Filtrer les élèves absents
+            const presentStudents = studentIds.filter(id => {
+                const student = students.find(s => s.id === id);
+                return student && !student.absent;
+            });
             
-            if (studentIds.length === 1) {
-                const student = students.find(s => s.id === studentIds[0]);
+            if (presentStudents.length === 0) {
+                alert("Veuillez sélectionner au moins un élève présent.");
+                return;
+            }
+            
+            pointsTargetStudents = presentStudents;
+            
+            if (presentStudents.length === 1) {
+                const student = students.find(s => s.id === presentStudents[0]);
                 removePointsModalText.textContent = `Retirer des points à ${student.name} (#${student.id})`;
             } else {
-                removePointsModalText.textContent = `Retirer des points à ${studentIds.length} élèves sélectionnés`;
+                removePointsModalText.textContent = `Retirer des points à ${presentStudents.length} élèves sélectionnés`;
             }
             
             removePointsModal.style.display = 'flex';
         }
-
+        
         // Appliquer des points aux élèves
-        function applyPoints(points) {
-            pointsTargetStudents.forEach(studentId => {
+        async function applyPoints(points) {
+            const updates = [];
+            
+            for (const studentId of pointsTargetStudents) {
                 const student = students.find(s => s.id === studentId);
                 if (student) {
-                    student.points += points;
+                    const newPoints = student.points + points;
+                    updates.push(updateStudentInFirebase(studentId, { points: newPoints }));
                 }
-            });
+            }
             
-            displayStudents();
+            // Attendre que toutes les mises à jour soient terminées
+            await Promise.all(updates);
+            
+            // Jouer le son correspondant
+            if (points > 0) {
+                playPositiveSound(); // Son pour points verts
+            } else {
+                playNegativeSound(); // Son pour points rouges
+            }
+            
             addPointsModal.style.display = 'none';
             removePointsModal.style.display = 'none';
         }
-
-        // Réinitialiser tous les points à zéro
-        function resetAllPoints() {
-            students.forEach(student => {
-                student.points = 0;
+        
+        // Marquer des élèves comme absents
+        async function markStudentsAsAbsent() {
+            const selectedStudents = getSelectedStudentIds();
+            
+            if (selectedStudents.length === 0) {
+                alert("Veuillez sélectionner au moins un élève.");
+                return;
+            }
+            
+            const updates = [];
+            for (const studentId of selectedStudents) {
+                updates.push(updateStudentInFirebase(studentId, { absent: true }));
+            }
+            
+            // Attendre que toutes les mises à jour soient terminées
+            await Promise.all(updates);
+            
+            // Désélectionner tous les élèves
+            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.closest('.student-card').classList.remove('selected');
             });
             
-            displayStudents();
+            alert(`${selectedStudents.length} élève(s) marqué(s) comme absent(s).`);
+        }
+        
+        // Marquer des élèves comme présents
+        async function markStudentsAsPresent() {
+            const selectedStudents = getSelectedStudentIds();
+            
+            if (selectedStudents.length === 0) {
+                alert("Veuillez sélectionner au moins un élève.");
+                return;
+            }
+            
+            const updates = [];
+            for (const studentId of selectedStudents) {
+                updates.push(updateStudentInFirebase(studentId, { absent: false }));
+            }
+            
+            // Attendre que toutes les mises à jour soient terminées
+            await Promise.all(updates);
+            
+            // Désélectionner tous les élèves
+            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.closest('.student-card').classList.remove('selected');
+            });
+            
+            alert(`${selectedStudents.length} élève(s) marqué(s) comme présent(s).`);
+        }
+        
+        // Réinitialiser tous les points à zéro
+        async function resetAllPoints() {
+            const updates = [];
+            
+            for (const student of students) {
+                updates.push(updateStudentInFirebase(student.id, { points: 0 }));
+            }
+            
+            // Attendre que toutes les mises à jour soient terminées
+            await Promise.all(updates);
+            
             resetModal.style.display = 'none';
             alert("Tous les points ont été réinitialisés avec succès !");
         }
-
+        
         // Obtenir les IDs des élèves sélectionnés
         function getSelectedStudentIds() {
             return Array.from(document.querySelectorAll('.student-checkbox:checked'))
                 .map(checkbox => parseInt(checkbox.id.split('-')[1]));
         }
-
+        
+        // Sélectionner tous les élèves (présents et absents)
+        function selectAllStudents() {
+            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                checkbox.checked = true;
+                checkbox.closest('.student-card').classList.add('selected');
+            });
+        }
+        
+        // Désélectionner tous les élèves
+        function deselectAllStudents() {
+            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.closest('.student-card').classList.remove('selected');
+            });
+        }
+        
         // Gestion des onglets
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
@@ -884,42 +1267,39 @@
                 tabs.forEach(t => t.classList.remove('active'));
                 tabContents.forEach(tc => tc.classList.remove('active'));
                 
-                // Activate the clicked tab
+                // Activer l'onglet cliqué
                 this.classList.add('active');
                 document.getElementById(tabId).classList.add('active');
             });
         });
-
-        // Événements
-        selectAllBtn.addEventListener('click', function() {
-            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
-                checkbox.checked = true;
-                checkbox.closest('.student-card').classList.add('selected');
-            });
-        });
-
-        deselectAllBtn.addEventListener('click', function() {
-            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
-                checkbox.checked = false;
-                checkbox.closest('.student-card').classList.remove('selected');
-            });
-        });
-
+        
+        // ==================== ÉVÉNEMENTS ====================
+        
+        selectAllBtn.addEventListener('click', selectAllStudents);
+        
+        deselectAllBtn.addEventListener('click', deselectAllStudents);
+        
         resetBtn.addEventListener('click', function() {
             resetModal.style.display = 'flex';
         });
-
+        
         cancelReset.addEventListener('click', function() {
             resetModal.style.display = 'none';
         });
-
+        
         confirmReset.addEventListener('click', resetAllPoints);
-
+        
         changeAvatarBtn.addEventListener('click', function() {
             const selectedStudents = getSelectedStudentIds();
             
             if (selectedStudents.length !== 1) {
                 alert("Veuillez sélectionner un seul élève pour changer son avatar.");
+                return;
+            }
+            
+            const student = students.find(s => s.id === selectedStudents[0]);
+            if (student && student.absent) {
+                alert("Vous ne pouvez pas changer l'avatar d'un élève absent.");
                 return;
             }
             
@@ -932,36 +1312,36 @@
             
             avatarModal.style.display = 'flex';
         });
-
+        
         cancelAvatar.addEventListener('click', function() {
             avatarModal.style.display = 'none';
             selectedStudentId = null;
             selectedAvatar = null;
         });
-
-        confirmAvatar.addEventListener('click', function() {
+        
+        confirmAvatar.addEventListener('click', async function() {
             if (!selectedAvatar) {
                 alert("Veuillez sélectionner un avatar.");
                 return;
             }
             
+            await updateStudentInFirebase(selectedStudentId, { avatar: selectedAvatar });
+            avatarModal.style.display = 'none';
+            
             const student = students.find(s => s.id === selectedStudentId);
             if (student) {
-                student.avatar = selectedAvatar;
-                displayStudents();
-                avatarModal.style.display = 'none';
                 alert(`Avatar de ${student.name} modifié avec succès !`);
             }
         });
-
+        
         cancelAddPoints.addEventListener('click', function() {
             addPointsModal.style.display = 'none';
         });
-
+        
         cancelRemovePoints.addEventListener('click', function() {
             removePointsModal.style.display = 'none';
         });
-
+        
         // Événements pour les boutons de points (AJOUTER)
         document.querySelectorAll('#addPointsModal .point-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -969,7 +1349,7 @@
                 applyPoints(points);
             });
         });
-
+        
         // Événements pour les boutons de points (RETIRER)
         document.querySelectorAll('#removePointsModal .point-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -977,43 +1357,56 @@
                 applyPoints(points);
             });
         });
-
+        
         // Événement pour le bouton d'ajout d'élève
         addStudentBtn.addEventListener('click', addStudent);
-
+        
         // Événement pour ajouter un élève avec la touche Entrée
         studentNameInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 addStudent();
             }
+            // Empêcher le comportement par défaut de la touche Entrée
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
         });
-
+        
         // Événements pour les boutons d'actions groupées
         addPointsBtn.addEventListener('click', function() {
             const selectedStudents = getSelectedStudentIds();
-            
-            if (selectedStudents.length === 0) {
-                alert("Veuillez sélectionner au moins un élève.");
-                return;
-            }
-            
             openAddPointsModal(selectedStudents);
         });
-
+        
         removePointsBtn.addEventListener('click', function() {
             const selectedStudents = getSelectedStudentIds();
-            
-            if (selectedStudents.length === 0) {
-                alert("Veuillez sélectionner au moins un élève.");
-                return;
-            }
-            
             openRemovePointsModal(selectedStudents);
         });
-
-        // Initialiser l'affichage
-        displayStudents();
-        displayStudentList();
+        
+        markAbsentBtn.addEventListener('click', markStudentsAsAbsent);
+        
+        markPresentBtn.addEventListener('click', markStudentsAsPresent);
+        
+        // ==================== INITIALISATION ====================
+        
+        // Initialiser l'application
+        async function initializeApp() {
+            try {
+                // Charger les élèves depuis Firebase
+                loadStudentsFromFirebase();
+                
+                // Initialiser les données par défaut (si nécessaire)
+                await initializeDefaultData();
+                
+                console.log("Application initialisée avec succès");
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation: ", error);
+                alert("Erreur lors du chargement des données. Veuillez rafraîchir la page.");
+            }
+        }
+        
+        // Démarrer l'application
+        initializeApp();
     </script>
 </body>
 </html>
